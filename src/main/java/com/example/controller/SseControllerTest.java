@@ -60,7 +60,6 @@ class Utils {
 @RequestMapping("/api/sse")
 public class SseControllerTest {
     private static Map<String, SseEmitter> sseCache = new ConcurrentHashMap<>();
-    private static Map<String, Thread> sseThread = new ConcurrentHashMap<>();
 
     @GetMapping(path = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(@RequestParam String id) throws IOException {
@@ -116,7 +115,6 @@ public class SseControllerTest {
             }
             closeEmitter(id);
         });
-        sseThread.put(id, t);
         t.start();
     }
 

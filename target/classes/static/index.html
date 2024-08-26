@@ -1,0 +1,106 @@
+
+<html>
+    <head>
+        <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js">
+        </script>
+        <style>
+            .message_div {
+                border: solid 1px #000; 
+                width: 20%; 
+                height: 600px; 
+                flex-basis: calc(25% - 10px);
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <select id="select_id">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+        </select>
+        <button id="btnStart" >start</button>
+        <button id="btnClose" >Close</button>
+        <div id="count">selectedID</div>
+        <div id="content" style="display: flex; justify-content: space-between;">
+            <div id="box-0" class="message_div"></div>
+            <div id="box-1" class="message_div"></div>
+            <div id="box-2" class="message_div"></div>
+            <div id="box-3" class="message_div"></div>
+        </div>
+    </body>
+    <script language="javascript">
+        const  mapEventSources = {}
+
+        $(document).ready(()=>{
+            function closeEventSource(id) {
+                if (mapEventSources[id] !== undefined) {
+                    mapEventSources[id].close()
+                    delete mapEventSources[id]
+                }            
+            }
+
+            function createEventSource(id) {
+                const eventSource = new EventSource(`/api/sse/subscribe?id=${id}`)
+                mapEventSources[id] = eventSource;
+
+                eventSource.onopen = function(event) {
+                    console.log("sse opened");
+
+                    if($(`#box-${id}`).length === 0) {
+                        var newDiv = $('<div />', {
+                            'id': `box-${id}`, // 设置class
+                            'style': "border:1px solid #000;"
+                        });
+                        $('#content').append(newDiv);
+                    }
+                    $.get(`/api/sse/receive?id=${id}&content=test`).then((res)=>{
+                        console.log(res);
+                    });
+                };
+
+                eventSource.onmessage = function(event) {
+                    // console.log(event)
+                    // const id = event.data.split("-")[1]
+                    // console.log(id)
+                    $(`#box-${id}`).html($(`#box-${id}`).html()+event.data +"<br>")
+                };
+
+                eventSource.addEventListener("close", (event)=>{
+                    console.log("CLOSE", event)
+                    closeEventSource(id)
+                });
+
+                eventSource.onerror = function(event) {
+                    console.log('发生错误:', event);
+                    closeEventSource(id)
+                };
+                
+            }
+
+            $("#btnStart").click(()=>{
+                const selectedID = $("#select_id").val();
+                console.log(selectedID);
+                $("#count").html(`selectedID=${selectedID}`);
+                // $(`#box-${selectedID}`).html("")
+
+                if (mapEventSources[selectedID] === undefined) {
+                    console.log("no sse, create");
+                    createEventSource(selectedID); 
+                }else {
+                    console.log("alradey have sse, pass");
+                }
+            })
+
+            $("#btnClose").click(()=>{
+                const selectedID = $("#select_id").val();
+                $.get(`/api/sse/close?id=${selectedID}`).then((res)=>{
+                    console.log(res);
+                    closeEventSource(selectedID)
+                });
+            })
+        })
+    </script>
+</html>
+
